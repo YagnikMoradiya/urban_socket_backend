@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
   res.send("Hello Socket 👋👋");
 });
 
-let users = {};
+// let users = [];
 
 // const addUser = (userId, socketId) => {
 //   !users.some((user) => user.userId === userId) &&
@@ -33,19 +33,23 @@ let users = {};
 //   return users.find((user) => user.userId === userId);
 // };
 
+let requests = [];
+
+let users = {};
+
 const addUser = (userId, socketId) => {
-  users[userId] = { userId, socketId };
+  users[ userId ] = { userId, socketId };
 };
 
 const removeUser = (socketId) => {
   const user = Object.values(users).find((a) => a.socketId === socketId);
   if (user) {
-    delete users[user.userId];
+    delete users[ user.userId ];
   }
 };
 
 const getUser = (userId) => {
-  const user = users[userId];
+  const user = users[ userId ];
   if (user) {
     return user;
   }
@@ -54,7 +58,6 @@ const getUser = (userId) => {
 
 io.on("connection", (socket) => {
   console.log("Connection successfull");
-  console.log(users);
 
   //take userId and socketId from user
   socket.on("addUser", (userId) => {
@@ -62,10 +65,22 @@ io.on("connection", (socket) => {
     io.emit("getUsers", users);
   });
 
+  console.log(users);
   //send and get message
   socket.on("sendMessage", ({ senderId, receiverId, text }) => {
+    console.log(receiverId);
     const user = getUser(receiverId);
+    console.log(user);
     io.to(user.socketId).emit("getMessage", {
+      senderId,
+      text,
+    });
+  });
+
+  //send and get request
+  socket.on("sendRequest", ({ senderId, receiverId, text }) => {
+    const user = getUser(receiverId);
+    io.to(user.socketId).emit("getRequest", {
       senderId,
       text,
     });
