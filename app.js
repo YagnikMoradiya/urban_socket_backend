@@ -1,86 +1,39 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-
-// Initializing io server
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
+const io = require("socket.io")(5050, {
   cors: {
-    origin: "*", // http://localhost:3000
+    origin: "*",
   },
 });
 
-// Extra variable
-const PORT = process.env.PORT || 5050;
-
-app.get("/", (req, res) => {
-  res.send("Hello Socket 👋👋");
-});
-
-// let users = [];
-
-// const addUser = (userId, socketId) => {
-//   !users.some((user) => user.userId === userId) &&
-//     users.push({ userId, socketId });
-// };
-
-// const removeUser = (socketId) => {
-//   users = users.filter((user) => user.socketId !== socketId);
-// };
-
-// const getUser = (userId) => {
-//   return users.find((user) => user.userId === userId);
-// };
-
-let requests = [];
-
-let users = {};
+let users = [];
 
 const addUser = (userId, socketId) => {
-  users[ userId ] = { userId, socketId };
+  !users.some((user) => user.userId === userId) &&
+    users.push({ userId, socketId });
 };
 
 const removeUser = (socketId) => {
-  const user = Object.values(users).find((a) => a.socketId === socketId);
-  if (user) {
-    delete users[ user.userId ];
-  }
+  users = users.filter((user) => user.socketId !== socketId);
 };
 
 const getUser = (userId) => {
-  const user = users[ userId ];
-  if (user) {
-    return user;
-  }
-  return {};
+  return users.find((user) => user.userId === userId);
 };
 
 io.on("connection", (socket) => {
-  console.log("Connection successfull");
+  //when ceonnect
+  console.log("a user connected.");
 
   //take userId and socketId from user
   socket.on("addUser", (userId) => {
     addUser(userId, socket.id);
-    io.emit("getUsers", users);
+    console.log(users);
   });
 
-  console.log(users);
   //send and get message
   socket.on("sendMessage", ({ senderId, receiverId, text }) => {
-    console.log(receiverId);
     const user = getUser(receiverId);
-    console.log(user);
+    if (!user) return;
     io.to(user.socketId).emit("getMessage", {
-      senderId,
-      text,
-    });
-  });
-
-  //send and get request
-  socket.on("sendRequest", ({ senderId, receiverId, text }) => {
-    const user = getUser(receiverId);
-    io.to(user.socketId).emit("getRequest", {
       senderId,
       text,
     });
@@ -90,10 +43,6 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("a user disconnected!");
     removeUser(socket.id);
-    io.emit("getUsers", users);
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Hello From socket on ${PORT}`);
-});
